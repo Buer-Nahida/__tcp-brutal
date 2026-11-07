@@ -14,21 +14,26 @@
         inherit version;
         src = ./.;
         nativeBuildInputs = kernel.moduleBuildDependencies;
-        makeFlags = kernel.makeFlags ++ [
-          "KERNEL_RELEASE=${kernel.modDirVersion}"
-          "KERNEL_DIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+        # Use Kbuild's module installation to sign modules and emit .ko.cer.
+        makeFlags = kernel.commonMakeFlags ++ [
+          "KBUILD_OUTPUT=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+          "DEPMOD=true"
+          "INSTALL_MOD_STRIP=1"
+          "INSTALL_MOD_PATH=${placeholder "out"}"
           "INSTALL_MOD_DIR=extra"
         ];
-        buildPhase = ''
-          runHook preBuild
-          make ''${makeFlagsArray[@]} -C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build M=$(pwd) modules
-          runHook postBuild
-        '';
-        installPhase = ''
-          runHook preInstall
-          make ''${makeFlagsArray[@]} -C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build M=$(pwd) INSTALL_MOD_PATH=$out modules_install
-          runHook postInstall
-        '';
+        buildFlags = [
+          "-C"
+          "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+          "M=$(PWD)"
+          "modules"
+        ];
+        installFlags = [
+          "-C"
+          "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+          "M=$(PWD)"
+        ];
+        installTargets = [ "modules_install" ];
         meta = with pkgs.lib; {
           description = "TCP Brutal congestion control algorithm";
           homepage = "https://github.com/HyNetworks/tcp-brutal";
